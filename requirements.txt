@@ -1,0 +1,9 @@
+openai>=1.0.0
+playwright>=1.40.0
+httpx>=0.25.0
+python-dotenv>=1.0.0
+
+# Server mode (optional)
+fastapi>=0.109.0
+uvicorn>=0.27.0
+pydantic>=2.0.0
