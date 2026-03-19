@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=800, height=480">
+    <title>Schedule Dashboard</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body {
+            width: 800px;
+            height: 480px;
+            font-family: Arial, Helvetica, sans-serif;
+            background: #fff;
+            color: #000;
+            overflow: hidden;
+        }
+        .container {
+            width: 800px;
+            height: 480px;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 3px solid #000;
+        }
+        .date-display {
+            font-size: 28px;
+            font-weight: bold;
+        }
+        .clock {
+            font-size: 32px;
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+        }
+        .events {
+            flex: 1;
+            overflow: hidden;
+        }
+        .event {
+            display: flex;
+            gap: 16px;
+            padding: 12px 0;
+            border-bottom: 1px solid #ccc;
+        }
+        .event:last-child {
+            border-bottom: none;
+        }
+        .event-time {
+            width: 80px;
+            font-size: 18px;
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+        }
+        .event-time-red {
+            color: #c00;
+        }
+        .event-content {
+            flex: 1;
+        }
+        .event-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+        .event-details {
+            font-size: 14px;
+            color: #666;
+        }
+        .event-now {
+            border-left: 4px solid #c00;
+            padding-left: 12px;
+            margin-left: -16px;
+            background: #fff5f5;
+        }
+        .no-events {
+            text-align: center;
+            color: #666;
+            font-size: 18px;
+            padding: 60px 0;
+        }
+        .footer {
+            margin-top: 16px;
+            padding-top: 12px;
+            border-top: 2px solid #000;
+            font-size: 14px;
+            display: flex;
+            justify-content: space-between;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="date-display">{{ date }}</div>
+            <div class="clock">{{ clock }}</div>
+        </div>
+        
+        <div class="events">
+            {{ events }}
+        </div>
+        
+        <div class="footer">
+            <span>{{ summary }}</span>
+            <span>{{ next_event }}</span>
+        </div>
+    </div>
+</body>
+</html>

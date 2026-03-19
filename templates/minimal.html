@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=800, height=480">
+    <title>E-Ink Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        html, body {
+            width: 800px;
+            height: 480px;
+            font-family: Arial, Helvetica, sans-serif;
+            background: #fff;
+            color: #000;
+            overflow: hidden;
+        }
+        
+        .container {
+            width: 800px;
+            height: 480px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        h1 {
+            font-size: 32px;
+            font-weight: bold;
+            margin-bottom: 16px;
+            color: #000;
+        }
+        
+        h2 {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 12px;
+            color: #000;
+        }
+        
+        h3 {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #000;
+        }
+        
+        p {
+            font-size: 16px;
+            line-height: 1.4;
+            margin-bottom: 8px;
+        }
+        
+        .red {
+            color: #c00;
+        }
+        
+        .text-large {
+            font-size: 48px;
+            font-weight: bold;
+        }
+        
+        .text-medium {
+            font-size: 24px;
+        }
+        
+        .text-small {
+            font-size: 14px;
+        }
+        
+        .grid {
+            display: grid;
+            gap: 16px;
+        }
+        
+        .grid-2 {
+            grid-template-columns: 1fr 1fr;
+        }
+        
+        .grid-3 {
+            grid-template-columns: 1fr 1fr 1fr;
+        }
+        
+        .card {
+            padding: 16px;
+            border: 2px solid #000;
+        }
+        
+        .card-red {
+            border-color: #c00;
+        }
+        
+        .flex {
+            display: flex;
+        }
+        
+        .flex-col {
+            flex-direction: column;
+        }
+        
+        .justify-between {
+            justify-content: space-between;
+        }
+        
+        .items-center {
+            align-items: center;
+        }
+        
+        .mt-auto {
+            margin-top: auto;
+        }
+        
+        .text-center {
+            text-align: center;
+        }
+        
+        .divider {
+            border-top: 2px solid #000;
+            margin: 12px 0;
+        }
+        
+        .divider-red {
+            border-color: #c00;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Dashboard content goes here -->
+        {{ content }}
+    </div>
+</body>
+</html>

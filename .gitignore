@@ -7,9 +7,9 @@ venv/
 *.egg-info/
 
 # Output
-output/
-*.png
-*.html
+output/*.png
+output/*.html
+!output/.gitkeep
 
 # Environment
 .env

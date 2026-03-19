@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=800, height=480">
+    <title>Weather Dashboard</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body {
+            width: 800px;
+            height: 480px;
+            font-family: Arial, Helvetica, sans-serif;
+            background: #fff;
+            color: #000;
+            overflow: hidden;
+        }
+        .container {
+            width: 800px;
+            height: 480px;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+        .location {
+            font-size: 28px;
+            font-weight: bold;
+        }
+        .date {
+            font-size: 18px;
+            color: #666;
+        }
+        .main {
+            display: flex;
+            gap: 32px;
+            flex: 1;
+        }
+        .current {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        .temp {
+            font-size: 96px;
+            font-weight: bold;
+            line-height: 1;
+        }
+        .temp-red { color: #c00; }
+        .condition {
+            font-size: 24px;
+            margin-top: 8px;
+        }
+        .details {
+            width: 280px;
+            padding: 16px;
+            border: 2px solid #000;
+        }
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #ccc;
+        }
+        .detail-row:last-child {
+            border-bottom: none;
+        }
+        .detail-label {
+            font-size: 16px;
+        }
+        .detail-value {
+            font-size: 16px;
+            font-weight: bold;
+        }
+        .forecast {
+            display: flex;
+            justify-content: space-between;
+            margin-top: auto;
+            padding-top: 16px;
+            border-top: 2px solid #000;
+        }
+        .day {
+            text-align: center;
+            flex: 1;
+        }
+        .day-name {
+            font-size: 14px;
+            margin-bottom: 4px;
+        }
+        .day-temp {
+            font-size: 18px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="location">{{ location }}</div>
+            <div class="date">{{ date }}</div>
+        </div>
+        
+        <div class="main">
+            <div class="current">
+                <div class="temp {{ temp_class }}">{{ temp }}°</div>
+                <div class="condition">{{ condition }}</div>
+            </div>
+            
+            <div class="details">
+                <div class="detail-row">
+                    <span class="detail-label">Feels like</span>
+                    <span class="detail-value">{{ feels_like }}°</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Humidity</span>
+                    <span class="detail-value">{{ humidity }}%</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Wind</span>
+                    <span class="detail-value">{{ wind }} m/s</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Pressure</span>
+                    <span class="detail-value">{{ pressure }} hPa</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">UV Index</span>
+                    <span class="detail-value">{{ uv_index }}</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="forecast">
+            {{ forecast_days }}
+        </div>
+    </div>
+</body>
+</html>
