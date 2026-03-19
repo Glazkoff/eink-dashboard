@@ -1,6 +1,6 @@
 # E-Ink Dashboard Generator
 
-AI-powered HTML dashboard generator for e-ink displays. Generates dashboards via LLM (OpenRouter/Z.ai), renders to 800x480, validates with VLM critic, and sends to eink_mcp content plan.
+AI-powered HTML dashboard generator for e-ink displays with **VLM critic validation** and **template learning system**. Generates dashboards via LLM, validates quality, learns from successful outputs, and sends to eink_mcp content plan.
 
 ## Architecture
 
@@ -9,19 +9,56 @@ AI-powered HTML dashboard generator for e-ink displays. Generates dashboards via
 │   Prompt    │ ──▶ │  LLM (OpenRouter │ ──▶ │    HTML     │
 │  / Context  │     │     / Z.ai)      │     │  Dashboard  │
 └─────────────┘     └──────────────────┘     └─────────────┘
-                                                   │
-                                                   ▼
-┌─────────────┐     ┌──────────────────┐     ┌─────────────┐
-│  eink_mcp   │ ◀── │   VLM Critic     │ ◀── │  Playwright │
-│    Plan     │     │   (validate)     │     │   Render    │
-└─────────────┘     └──────────────────┘     └─────────────┘
-                           │
-                           ▼
-                    ┌─────────────┐
-                    │   Approve   │ → Send to eink_mcp
-                    │   Retry     │ → Regenerate with feedback
-                    │   Abort     │ → Skip, notify user
-                    └─────────────┘
+         │                                          │
+         │                                          ▼
+         │     ┌──────────────────┐     ┌─────────────┐
+         │     │   VLM Critic     │ ◀── │  Playwright │
+         │     │   (validate)     │     │   Render    │
+         │     └────────┬─────────┘     └─────────────┘
+         │              │
+         │              ▼
+         │     ┌─────────────────┐
+         │     │    Approve      │──────▶ Send to eink_mcp
+         │     │    Retry        │──────▶ Regenerate with feedback
+         │     │    Abort        │──────▶ Use best or fail
+         │     └─────────────────┘
+         │
+         ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    TEMPLATE LEARNING                         │
+│                                                              │
+│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐   │
+│  │   Prompt     │───▶│  Classify    │───▶│  Match       │   │
+│  │              │    │  Intent      │    │  Template    │   │
+│  └──────────────┘    └──────────────┘    └──────┬───────┘   │
+                                                   │          │
+                        ┌──────────────────────────┼───┐      │
+                        │                          │   │      │
+                        ▼                          ▼   │      │
+                   ┌─────────┐                ┌─────────┐│      │
+                   │ Reuse   │                │ Create  ││      │
+                   │Template │                │  New    ││      │
+                   └────┬────┘                └────┬────┘│      │
+                        │                          │     │      │
+                        └──────────┬───────────────┘     │      │
+                                   ▼                     │      │
+                          ┌────────────────┐             │      │
+                          │    Generate    │             │      │
+                          │    Dashboard   │◀────────────┘      │
+                          └───────┬────────┘                    │
+                                  │                             │
+                                  ▼                             │
+                          ┌────────────────┐                    │
+                          │ Critic Result  │                    │
+                          │ (success/fail) │                    │
+                          └───────┬────────┘                    │
+                                  │                             │
+                                  ▼                             │
+                          ┌────────────────┐                    │
+                          │ Update Stats   │────────────────────┘
+                          │ (learn)        │
+                          └────────────────┘
+└─────────────────────────────────────────────────────────────┘
 ```
 
 ## Features
@@ -29,9 +66,10 @@ AI-powered HTML dashboard generator for e-ink displays. Generates dashboards via
 - **LLM Dashboard Generation** - OpenRouter/Z.ai compatible APIs
 - **VLM Quality Critic** - Validates rendered images before sending
 - **Auto-Retry with Feedback** - Critic feedback improves regeneration
+- **Template Learning** - Creates and reuses successful templates
+- **Intent Classification** - Matches prompts to best template
 - **HTML → PNG Rendering** - Playwright headless browser (800x480)
 - **E-Ink Optimized** - Tri-color palette support (black/red/white)
-- **Template System** - Reusable dashboard templates
 - **CLI + API** - Use from command line or integrate programmatically
 
 ## Installation
@@ -71,29 +109,53 @@ OUTPUT_DIR=./output                    # Where to save generated images
 ### CLI
 
 ```bash
-# Generate dashboard from prompt
+# Basic generation
 python generate.py --prompt "Show weather, calendar events, and a quote of the day"
 
-# Use specific template
-python generate.py --template weather --prompt "Moscow weather"
+# With template learning (recommended)
+python generate.py --prompt "Show weather for Moscow today and tomorrow" --learn --critic --send
 
-# Send to eink_mcp plan
-python generate.py --prompt "Daily summary" --send --duration 60
+# With built-in template
+python generate.py --template weather --prompt "Moscow weather"
 
 # With VLM critic validation
 python generate.py --prompt "Daily summary" --critic --send
 
-# With critic + custom settings
+# Full pipeline: learning + critic + send
 python generate.py \
-  --prompt "Show my calendar" \
+  --prompt "Weather forecast for the week" \
+  --learn \
   --critic \
-  --critic-model openai/gpt-4o \
-  --threshold 0.8 \
+  --threshold 0.75 \
   --max-retries 3 \
-  --send
+  --send \
+  --duration 120
 
-# Custom context (inject data)
-python generate.py --context data.json --prompt "Render this data as a dashboard"
+# List learned templates
+python generate.py --list-templates
+```
+
+### Template Learning
+
+The system automatically:
+1. **Classifies** your prompt (intent, keywords, complexity)
+2. **Matches** against existing learned templates
+3. **Reuses** successful templates if confidence ≥ threshold
+4. **Creates** new templates when no match found
+5. **Records** results to improve future matching
+
+**How it works:**
+- First time you ask "Show weather today and tomorrow" → creates new template
+- Next time you ask "Weather forecast for Moscow" → reuses template (high confidence)
+- Template success rate affects future matching
+- Failed generations decrease template priority
+
+```bash
+# Enable learning
+python generate.py --prompt "Show my calendar" --learn --critic --send
+
+# Adjust confidence threshold
+python generate.py --prompt "Stats dashboard" --learn --min-confidence 0.8 --send
 ```
 
 ### VLM Critic
@@ -129,31 +191,31 @@ python generate.py --prompt "Schedule" --critic --max-retries 5 --send
 ```python
 from generator import DashboardGenerator
 from critic import DashboardCritic, CriticVerdict
+from template_registry import TemplateRegistry
 
-gen = DashboardGenerator()
+# With template learning
+gen = DashboardGenerator(use_template_learning=True)
 critic = DashboardCritic(threshold_approve=0.7)
 
-# Generate HTML
-html = await gen.generate_html("Show my daily stats")
+# Generate with learning
+html, template_id, is_new = await gen.generate_with_template_learning(
+    "Show weather for Moscow today and tomorrow"
+)
 
 # Render to image
 image_path = await gen.render(html)
 
 # Evaluate with critic
-result = await critic.evaluate(image_path, prompt="Show my daily stats")
+result = await critic.evaluate(image_path, prompt="Show weather...")
 
 print(f"Score: {result.score}")
 print(f"Verdict: {result.verdict.value}")
-print(f"Issues: {result.issues}")
 
 if result.verdict == CriticVerdict.APPROVE:
+    # Record success for learning
+    gen.record_template_result(template_id, success=True, score=result.score, prompt="...")
     # Send to eink_mcp
     await gen.send_to_plan(image_path, duration=60)
-elif result.verdict == CriticVerdict.RETRY:
-    # Get feedback for regeneration
-    feedback = critic.get_feedback_prompt(result)
-    new_html = await gen.generate_html(f"Show my daily stats\n\n{feedback}")
-    # ... retry loop
 ```
 
 ## Templates
@@ -165,16 +227,7 @@ Built-in templates in `templates/`:
 - `stats.html` - Statistics/metrics grid
 - `schedule.html` - Calendar/events list
 
-Templates use `{{ variables }}` for dynamic content.
-
-## E-Ink Optimization
-
-Generated images are optimized for tri-color e-ink:
-
-- Color quantization to black/red/white palette
-- High contrast text
-- No gradients (solid colors only)
-- 800x480 resolution
+Learned templates stored in `templates/learned/` with metadata in `output/template_registry.json`.
 
 ## API Endpoints (Server Mode)
 
@@ -192,20 +245,24 @@ Endpoints:
 | `/send` | POST | Send image to eink_mcp |
 | `/critic` | POST | Evaluate image with VLM critic |
 | `/generate-and-send` | POST | Full pipeline (no critic) |
-| `/generate-with-critic` | POST | Full pipeline with critic validation |
-| `/templates` | GET | List available templates |
+| `/generate-with-critic` | POST | Full pipeline with critic |
+| `/learn` | POST | Full pipeline with template learning + critic |
+| `/record` | POST | Manually record template result |
+| `/templates` | GET | List built-in templates |
+| `/templates/learned` | GET | List learned templates with stats |
+| `/templates/{id}` | GET | Get specific template |
 | `/images/{filename}` | GET | Serve generated image |
 | `/health` | GET | Health check |
 
-### Example: Generate with Critic
+### Example: Generate with Learning
 
 ```bash
-curl -X POST http://localhost:8080/generate-with-critic \
+curl -X POST http://localhost:8080/learn \
   -H "Content-Type: application/json" \
   -d '{
-    "prompt": "Show weather forecast for Moscow",
-    "template": "weather",
+    "prompt": "Show weather forecast for Moscow today and tomorrow",
     "duration": 120,
+    "min_confidence": 0.7,
     "threshold": 0.75,
     "max_retries": 3
   }'
@@ -217,6 +274,8 @@ Response:
   "success": true,
   "image_path": "/app/output/dashboard_abc123.png",
   "image_url": "/images/dashboard_abc123.png",
+  "template_id": "weather_7f3a2b",
+  "template_is_new": false,
   "critic_score": 0.85,
   "critic_verdict": "approve",
   "attempts": 1,

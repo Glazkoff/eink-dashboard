@@ -19,6 +19,7 @@ from config import (
     DISPLAY_HEIGHT,
     EINK_MCP_URL,
 )
+from template_registry import TemplateRegistry
 
 
 class DashboardGenerator:
@@ -39,17 +40,19 @@ Rules:
 Generate complete HTML documents with embedded CSS.
 Focus on clarity over decoration."""
 
-    def __init__(self):
+    def __init__(self, use_template_learning: bool = True):
         self.client = AsyncOpenAI(
             api_key=OPENAI_API_KEY,
             base_url=OPENAI_BASE_URL,
         )
+        self.template_registry = TemplateRegistry() if use_template_learning else None
 
     async def generate_html(
         self,
         prompt: str,
         context: Optional[dict] = None,
         template: Optional[str] = None,
+        base_html: Optional[str] = None,
     ) -> str:
         """Generate HTML dashboard from prompt using LLM."""
         messages = [
@@ -61,8 +64,11 @@ Focus on clarity over decoration."""
             context_str = f"Context data:\n{json.dumps(context, indent=2, ensure_ascii=False)}"
             messages.append({"role": "user", "content": context_str})
 
-        # Add template if provided
-        if template:
+        # Add base template if provided (for learned templates)
+        if base_html:
+            prompt = f"Base template:\n```html\n{base_html}\n```\n\nFill in this template with actual data. {prompt}"
+        # Add built-in template if specified
+        elif template:
             template_path = TEMPLATES_DIR / f"{template}.html"
             if template_path.exists():
                 template_html = template_path.read_text()
@@ -86,6 +92,42 @@ Focus on clarity over decoration."""
             content = content.split("```")[1].split("```")[0].strip()
 
         return content
+
+    async def generate_with_template_learning(
+        self,
+        prompt: str,
+        context: Optional[dict] = None,
+        min_confidence: float = 0.7,
+    ) -> tuple[str, str, bool]:
+        """Generate using learned template system.
+
+        Returns: (html, template_id, is_new_template)
+        """
+        if not self.template_registry:
+            # Fallback to regular generation
+            html = await self.generate_html(prompt, context)
+            return html, "default", False
+
+        # Get or create template
+        template_id, base_html, is_new = await self.template_registry.get_or_create_template(
+            prompt, min_confidence
+        )
+
+        # Generate using template
+        html = await self.generate_html(prompt, context, base_html=base_html)
+
+        return html, template_id, is_new
+
+    def record_template_result(
+        self,
+        template_id: str,
+        success: bool,
+        score: float,
+        prompt: str,
+    ):
+        """Record template usage result for learning."""
+        if self.template_registry:
+            self.template_registry.record_use(template_id, success, score, prompt)
 
     async def render(
         self,

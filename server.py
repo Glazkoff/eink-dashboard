@@ -12,11 +12,14 @@ from pydantic import BaseModel
 
 from generator import DashboardGenerator
 from critic import DashboardCritic, CriticVerdict
+from template_registry import TemplateRegistry
 from config import OUTPUT_DIR, EINK_MCP_URL
 
 app = FastAPI(title="E-Ink Dashboard Generator API")
-gen = DashboardGenerator()
+gen = DashboardGenerator(use_template_learning=True)
+gen_no_learning = DashboardGenerator(use_template_learning=False)
 critic = DashboardCritic()
+registry = TemplateRegistry()
 
 
 class GenerateRequest(BaseModel):
@@ -61,6 +64,23 @@ class FullWithCriticRequest(BaseModel):
     threshold: float = 0.7
 
 
+class LearnRequest(BaseModel):
+    prompt: str
+    context: Optional[dict] = None
+    duration: int = 60
+    priority: int = 0
+    min_confidence: float = 0.7
+    max_retries: int = 3
+    threshold: float = 0.7
+
+
+class RecordRequest(BaseModel):
+    template_id: str
+    success: bool
+    score: float
+    prompt: str
+
+
 @app.post("/generate")
 async def generate(req: GenerateRequest):
     """Generate HTML dashboard from prompt."""
@@ -95,7 +115,7 @@ async def send(req: SendRequest):
 async def generate_and_send(req: FullRequest, background_tasks: BackgroundTasks):
     """Full pipeline: generate, render, and send to plan."""
     try:
-        image_path, result = await gen.generate_and_send(
+        image_path, result = await gen_no_learning.generate_and_send(
             prompt=req.prompt,
             context=req.context,
             template=req.template,
@@ -148,10 +168,10 @@ async def generate_with_critic(req: FullWithCriticRequest):
         attempt += 1
 
         # Generate HTML
-        html = await gen.generate_html(current_prompt, req.context, req.template)
+        html = await gen_no_learning.generate_html(current_prompt, req.context, req.template)
 
         # Render to image
-        image_path = await gen.render(html)
+        image_path = await gen_no_learning.render(html)
 
         # Evaluate with critic
         result = await custom_critic.evaluate(
@@ -189,7 +209,7 @@ async def generate_with_critic(req: FullWithCriticRequest):
 
     # Send to eink_mcp
     try:
-        send_result = await gen.send_to_plan(
+        send_result = await gen_no_learning.send_to_plan(
             best_image or image_path,
             duration=req.duration,
             priority=req.priority,
@@ -205,6 +225,124 @@ async def generate_with_critic(req: FullWithCriticRequest):
         "critic_verdict": (best_result or result).verdict.value,
         "attempts": attempt,
         "result": send_result,
+    }
+
+
+# === Template Learning Endpoints ===
+
+@app.post("/learn")
+async def generate_with_learning(req: LearnRequest):
+    """Full pipeline with template learning: match/create template, generate, critic, send."""
+    custom_critic = DashboardCritic(threshold_approve=req.threshold)
+
+    current_prompt = req.prompt
+    attempt = 0
+    best_result = None
+    best_score = 0
+    best_image = None
+    best_template_id = None
+    is_new_template = False
+
+    while attempt <= req.max_retries:
+        attempt += 1
+
+        # Generate with template learning
+        html, template_id, is_new = await gen.generate_with_template_learning(
+            current_prompt,
+            req.context,
+            min_confidence=req.min_confidence,
+        )
+        is_new_template = is_new
+
+        # Render to image
+        image_path = await gen.render(html)
+
+        # Evaluate with critic
+        result = await custom_critic.evaluate(
+            image_path,
+            prompt=req.prompt,
+            template=template_id,
+        )
+
+        # Track best attempt
+        if result.score > best_score:
+            best_score = result.score
+            best_result = result
+            best_image = image_path
+            best_template_id = template_id
+
+        # Record result for learning
+        success = result.verdict == CriticVerdict.APPROVE
+        gen.record_template_result(template_id, success, result.score, req.prompt)
+
+        # Check verdict
+        if result.verdict == CriticVerdict.APPROVE:
+            break
+
+        if result.verdict == CriticVerdict.ABORT:
+            if best_score >= 0.5:
+                image_path = best_image
+                result = best_result
+                break
+            raise HTTPException(422, {
+                "error": "Critic aborted generation",
+                "issues": result.issues,
+                "attempts": attempt,
+            })
+
+        # Prepare feedback for retry
+        if attempt <= req.max_retries:
+            feedback = custom_critic.get_feedback_prompt(result)
+            current_prompt = f"{req.prompt}\n\n{feedback}"
+
+    # Send to eink_mcp
+    try:
+        send_result = await gen.send_to_plan(
+            best_image or image_path,
+            duration=req.duration,
+            priority=req.priority,
+        )
+    except httpx.HTTPError as e:
+        raise HTTPException(502, f"eink_mcp error: {e}")
+
+    return {
+        "success": True,
+        "image_path": str(best_image or image_path),
+        "image_url": f"/images/{(best_image or image_path).name}",
+        "template_id": best_template_id,
+        "template_is_new": is_new_template,
+        "critic_score": best_score,
+        "critic_verdict": best_result.verdict.value if best_result else "unknown",
+        "attempts": attempt,
+        "result": send_result,
+    }
+
+
+@app.post("/record")
+async def record_template_result(req: RecordRequest):
+    """Manually record template usage result."""
+    gen.record_template_result(req.template_id, req.success, req.score, req.prompt)
+    return {"success": True}
+
+
+@app.get("/templates/learned")
+async def list_learned_templates():
+    """List all learned templates with stats."""
+    return registry.get_stats()
+
+
+@app.get("/templates/{template_id}")
+async def get_template(template_id: str):
+    """Get a specific learned template."""
+    html = registry.get_template(template_id)
+    if not html:
+        raise HTTPException(404, "Template not found")
+
+    meta = registry.get_template_meta(template_id)
+    return {
+        "id": template_id,
+        "html": html,
+        "meta": meta.to_dict() if meta else None,
     }
 
 
