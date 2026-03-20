@@ -14,7 +14,7 @@ from pydantic import BaseModel
 from generator import DashboardGenerator
 from critic import DashboardCritic, CriticVerdict
 from template_registry import TemplateRegistry
-from config import OUTPUT_DIR, EINK_MCP_URL
+from context_providers import fetch_contexts, from config import OUTPUT_DIR, EINK_MCP_URL
 
 app = FastAPI(title="E-Ink Dashboard Generator API")
 
@@ -62,6 +62,8 @@ class FullRequest(BaseModel):
     template: Optional[str] = None
     duration: int = 60
     priority: int = 0
+    max_retries: int = 3
+    threshold: float = 0.7
 
 
 class CriticRequest(BaseModel):
@@ -83,6 +85,8 @@ class FullWithCriticRequest(BaseModel):
 class LearnRequest(BaseModel):
     prompt: str
     context: Optional[dict] = None
+    context_providers: Optional[list[str]] = None
+    provider_configs: Optional[dict] = None
     duration: int = 60
     priority: int = 0
     min_confidence: float = 0.7
@@ -244,11 +248,49 @@ async def generate_with_critic(req: FullWithCriticRequest):
     }
 
 
+# === Context Provider Endpoints ===
+
+@app.get("/providers")
+async def list_providers():
+    """List available context providers."""
+    return {
+        "providers": [
+            {
+                "name": name,
+                "description": cls.__doc__ or "No description"
+            }
+            for name, cls in PROVIDERS.items()
+        ]
+    }
+
+
+@app.post("/fetch-contexts")
+async def fetch_context_data(
+    providers: list[str],
+    configs: Optional[dict] = None
+):
+    """Fetch data from context providers."""
+    contexts = await fetch_contexts(providers, configs)
+    return contexts
+
+
 # === Template Learning Endpoints ===
 
 @app.post("/learn")
 async def generate_with_learning(req: LearnRequest):
-    """Full pipeline with template learning: match/create template, generate, critic, send."""
+    """Full pipeline with template learning: match/create template, generate, critic, send.
+    
+    If context_providers specified, fetches data from providers before generation.
+    """
+    # Fetch context from providers if specified
+    context = req.context or {}
+    if req.context_providers:
+        fetched = await fetch_contexts(
+            req.context_providers,
+            req.provider_configs
+        )
+        context.update(fetched)
+    
     custom_critic = DashboardCritic(threshold_approve=req.threshold)
 
     current_prompt = req.prompt
@@ -265,9 +307,10 @@ async def generate_with_learning(req: LearnRequest):
         # Generate with template learning
         html, template_id, is_new = await gen.generate_with_template_learning(
             current_prompt,
-            req.context,
+            context,
             min_confidence=req.min_confidence,
         )
+        best_template_id = template_id
         is_new_template = is_new
 
         # Render to image

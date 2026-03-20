@@ -376,6 +376,46 @@
                     </div>
                 </div>
 
+                <h2>Providers</h2>
+                <div style="margin-bottom: 16px;">
+                    <div class="form-group" style="margin-bottom: 8px;">
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="prov_weather" checked>
+                            <label for="prov_weather" style="font-size: 13px;">Weather</label>
+                        </div>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 8px;">
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="prov_calendar" checked>
+                            <label for="prov_calendar" style="font-size: 13px;">Calendar</label>
+                        </div>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 8px;">
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="prov_tasks" checked>
+                            <label for="prov_tasks" style="font-size: 13px;">Tasks</label>
+                        </div>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 8px;">
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="prov_news">
+                            <label for="prov_news" style="font-size: 13px;">News</label>
+                        </div>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 8px;">
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="prov_time" checked>
+                            <label for="prov_time" style="font-size: 13px;">Time/Date</label>
+                        </div>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 8px;">
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="prov_quote">
+                            <label for="prov_quote" style="font-size: 13px;">Quote</label>
+                        </div>
+                    </div>
+                </div>
+
                 <button class="btn btn-primary" id="generateBtn" onclick="generateDashboard()">
                     Generate Dashboard
                 </button>
@@ -428,6 +468,15 @@
                 return;
             }
 
+            // Gather selected providers
+            const providers = [];
+            if (document.getElementById('prov_weather').checked) providers.push('weather');
+            if (document.getElementById('prov_calendar').checked) providers.push('calendar');
+            if (document.getElementById('prov_tasks').checked) providers.push('tasks');
+            if (document.getElementById('prov_news').checked) providers.push('news');
+            if (document.getElementById('prov_time').checked) providers.push('time');
+            if (document.getElementById('prov_quote').checked) providers.push('quote');
+
             const learn = document.getElementById('learn').checked;
             const critic = document.getElementById('critic').checked;
             const minConfidence = parseFloat(document.getElementById('minConfidence').value);
@@ -454,6 +503,7 @@
                 };
 
                 if (learn) {
+                    body.context_providers = providers;
                     body.min_confidence = minConfidence;
                     body.threshold = threshold;
                 } else if (critic) {
@@ -513,6 +563,9 @@
                     }
                     if (data.result) {
                         statusHtml += '<br>✓ Sent to eink_mcp';
+                    }
+                    if (providers.length > 0) {
+                        statusHtml += `<br>📊 Data from: <strong>${providers.join(', ')}</strong>`;
                     }
                     
                     showStatus(statusHtml, 'success');
