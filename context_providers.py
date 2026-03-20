@@ -164,6 +164,8 @@ class TimeProvider(ContextProvider):
             "date": now.strftime("%A, %B %d, %Y"),
             "weekday": now.strftime("%A"),
             "week_number": now.isocalendar()[1],
+            "generated_at": now.strftime("%H:%M"),
+            "note": "Time when dashboard was generated (not real-time clock)",
         }
 
 
