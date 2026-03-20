@@ -7,7 +7,8 @@ from typing import Optional
 
 import httpx
 from fastapi import FastAPI, HTTPException, BackgroundTasks
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from generator import DashboardGenerator
@@ -16,10 +17,25 @@ from template_registry import TemplateRegistry
 from config import OUTPUT_DIR, EINK_MCP_URL
 
 app = FastAPI(title="E-Ink Dashboard Generator API")
+
+# Mount static files
+STATIC_DIR = Path(__file__).parent / "static"
+if STATIC_DIR.exists():
+    app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
 gen = DashboardGenerator(use_template_learning=True)
 gen_no_learning = DashboardGenerator(use_template_learning=False)
 critic = DashboardCritic()
 registry = TemplateRegistry()
+
+
+@app.get("/", response_class=HTMLResponse)
+async def root():
+    """Serve the web UI."""
+    index_path = STATIC_DIR / "index.html"
+    if index_path.exists():
+        return index_path.read_text()
+    return "<html><body><h1>Web UI not found</h1><p>Static files not deployed</p></body></html>"
 
 
 class GenerateRequest(BaseModel):
