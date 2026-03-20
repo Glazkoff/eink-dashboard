@@ -236,7 +236,18 @@ Learned templates stored in `templates/learned/` with metadata in `output/templa
 python server.py --port 8080
 ```
 
-Endpoints:
+Then open **http://localhost:8080** in your browser for the **Web UI**!
+
+### Web UI Features
+
+- **Generate dashboards** - Enter prompt, configure options
+- **Template learning** - Enable/disable with checkbox
+- **VLM critic** - Validate quality before sending  
+- **Preview** - See rendered image at 800x480
+- **Template browser** - View built-in and learned templates
+- **One-click send** - Send to eink_mcp after generation
+
+### API Endpoints
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
