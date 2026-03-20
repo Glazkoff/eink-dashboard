@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-Ink Dashboard Generator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: #1a1a2e;
+            color: #eee;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        header h1 {
+            font-size: 28px;
+            margin-bottom: 8px;
+            color: #fff;
+        }
+
+        header p {
+            color: #888;
+            font-size: 14px;
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 400px 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 900px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .panel {
+            background: #16213e;
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid #0f3460;
+        }
+
+        .panel h2 {
+            font-size: 16px;
+            margin-bottom: 16px;
+            color: #e94560;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        label {
+            display: block;
+            font-size: 12px;
+            color: #888;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        textarea, input[type="text"], input[type="number"], select {
+            width: 100%;
+            padding: 12px;
+            background: #0f3460;
+            border: 1px solid #1a1a2e;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 14px;
+            font-family: inherit;
+        }
+
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        textarea:focus, input:focus, select:focus {
+            outline: none;
+            border-color: #e94560;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: #e94560;
+        }
+
+        .checkbox-group label {
+            margin: 0;
+            font-size: 14px;
+            color: #fff;
+            text-transform: none;
+        }
+
+        .options-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #e94560, #c73659);
+            color: #fff;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(233, 69, 96, 0.4);
+        }
+
+        .btn-primary:disabled {
+            background: #333;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn-secondary {
+            background: #0f3460;
+            color: #fff;
+            margin-top: 10px;
+        }
+
+        .btn-secondary:hover {
+            background: #1a4a7a;
+        }
+
+        /* Preview Panel */
+        .preview-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 400px;
+        }
+
+        .preview-placeholder {
+            text-align: center;
+            color: #666;
+        }
+
+        .preview-placeholder svg {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 16px;
+            opacity: 0.3;
+        }
+
+        .preview-image {
+            max-width: 100%;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .preview-info {
+            margin-top: 16px;
+            text-align: center;
+        }
+
+        .preview-info .score {
+            font-size: 24px;
+            font-weight: bold;
+            color: #4ade80;
+        }
+
+        .preview-info .template {
+            font-size: 12px;
+            color: #888;
+            margin-top: 4px;
+        }
+
+        /* Loading */
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid #0f3460;
+            border-top-color: #e94560;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            color: #888;
+            font-size: 14px;
+        }
+
+        /* Status */
+        .status {
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 16px;
+            font-size: 13px;
+        }
+
+        .status.success {
+            background: rgba(74, 222, 128, 0.1);
+            border: 1px solid rgba(74, 222, 128, 0.3);
+            color: #4ade80;
+        }
+
+        .status.error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #ef4444;
+        }
+
+        .status.info {
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            color: #3b82f6;
+        }
+
+        /* Templates list */
+        .templates-list {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .template-item {
+            padding: 10px;
+            background: #0f3460;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+
+        .template-item .name {
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .template-item .stats {
+            color: #888;
+            font-size: 11px;
+            margin-top: 4px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 16px;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 10px;
+            background: #0f3460;
+            border: none;
+            border-radius: 6px;
+            color: #888;
+            cursor: pointer;
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+
+        .tab.active {
+            background: #e94560;
+            color: #fff;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📺 E-Ink Dashboard Generator</h1>
+            <p>Generate beautiful dashboards for your e-ink display</p>
+        </header>
+
+        <div class="main-grid">
+            <!-- Control Panel -->
+            <div class="panel">
+                <h2>Generate</h2>
+                
+                <div class="form-group">
+                    <label for="prompt">Prompt</label>
+                    <textarea id="prompt" placeholder="Show weather forecast for Moscow today and tomorrow"></textarea>
+                </div>
+
+                <div class="options-row">
+                    <div class="form-group">
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="learn" checked>
+                            <label for="learn">Template Learning</label>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="critic" checked>
+                            <label for="critic">VLM Critic</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="options-row">
+                    <div class="form-group">
+                        <label for="minConfidence">Min Confidence</label>
+                        <input type="number" id="minConfidence" value="0.7" step="0.1" min="0" max="1">
+                    </div>
+                    <div class="form-group">
+                        <label for="threshold">Critic Threshold</label>
+                        <input type="number" id="threshold" value="0.7" step="0.1" min="0" max="1">
+                    </div>
+                </div>
+
+                <div class="options-row">
+                    <div class="form-group">
+                        <label for="duration">Duration (sec)</label>
+                        <input type="number" id="duration" value="60" min="10" max="3600">
+                    </div>
+                    <div class="form-group">
+                        <label for="maxRetries">Max Retries</label>
+                        <input type="number" id="maxRetries" value="3" min="0" max="10">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="send">
+                        <label for="send">Send to eink_mcp after generation</label>
+                    </div>
+                </div>
+
+                <button class="btn btn-primary" id="generateBtn" onclick="generateDashboard()">
+                    Generate Dashboard
+                </button>
+
+                <div id="status"></div>
+
+                <hr style="border: none; border-top: 1px solid #0f3460; margin: 20px 0;">
+
+                <h2>Templates</h2>
+                <div class="tabs">
+                    <button class="tab active" onclick="loadTemplates('builtin')">Built-in</button>
+                    <button class="tab" onclick="loadTemplates('learned')">Learned</button>
+                </div>
+                <div id="templatesList" class="templates-list">
+                    <div class="loading active">
+                        <div class="spinner"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Preview Panel -->
+            <div class="panel">
+                <h2>Preview (800×480)</h2>
+                <div class="preview-container" id="previewContainer">
+                    <div class="preview-placeholder">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <rect x="3" y="3" width="18" height="18" rx="2"/>
+                            <line x1="3" y1="9" x2="21" y2="9"/>
+                            <line x1="9" y1="21" x2="9" y2="9"/>
+                        </svg>
+                        <p>Generated dashboard will appear here</p>
+                    </div>
+                </div>
+                <div class="loading" id="loadingIndicator">
+                    <div class="spinner"></div>
+                    <div class="loading-text">Generating dashboard...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = window.location.origin;
+        let currentTemplateMode = 'builtin';
+
+        async function generateDashboard() {
+            const prompt = document.getElementById('prompt').value.trim();
+            if (!prompt) {
+                showStatus('Please enter a prompt', 'error');
+                return;
+            }
+
+            const learn = document.getElementById('learn').checked;
+            const critic = document.getElementById('critic').checked;
+            const minConfidence = parseFloat(document.getElementById('minConfidence').value);
+            const threshold = parseFloat(document.getElementById('threshold').value);
+            const duration = parseInt(document.getElementById('duration').value);
+            const maxRetries = parseInt(document.getElementById('maxRetries').value);
+            const send = document.getElementById('send').checked;
+
+            const btn = document.getElementById('generateBtn');
+            btn.disabled = true;
+            btn.textContent = 'Generating...';
+
+            document.getElementById('loadingIndicator').classList.add('active');
+            document.getElementById('previewContainer').style.display = 'none';
+            clearStatus();
+
+            try {
+                const endpoint = learn ? '/learn' : (critic ? '/generate-with-critic' : '/generate-and-send');
+                
+                const body = {
+                    prompt,
+                    duration,
+                    max_retries: maxRetries,
+                };
+
+                if (learn) {
+                    body.min_confidence = minConfidence;
+                    body.threshold = threshold;
+                } else if (critic) {
+                    body.threshold = threshold;
+                }
+
+                // If not sending, we need to render manually
+                if (!send && !learn && !critic) {
+                    // Simple generation without critic
+                    const htmlResp = await fetch(`${API_BASE}/generate`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ prompt })
+                    });
+                    
+                    if (!htmlResp.ok) throw new Error('Generation failed');
+                    
+                    const htmlData = await htmlResp.json();
+                    
+                    // Render
+                    const renderResp = await fetch(`${API_BASE}/render`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ html: htmlData.html })
+                    });
+                    
+                    if (!renderResp.ok) throw new Error('Render failed');
+                    
+                    const renderData = await renderResp.json();
+                    showPreview(renderData.image_url);
+                    showStatus('Dashboard generated successfully!', 'success');
+                } else {
+                    const response = await fetch(`${API_BASE}${endpoint}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(body)
+                    });
+
+                    if (!response.ok) {
+                        const error = await response.json();
+                        throw new Error(error.detail || 'Generation failed');
+                    }
+
+                    const data = await response.json();
+                    
+                    showPreview(data.image_url);
+                    
+                    let statusHtml = `✓ Generated in ${data.attempts} attempt(s)`;
+                    if (data.critic_score !== undefined) {
+                        statusHtml += ` | Score: <strong>${(data.critic_score * 100).toFixed(0)}%</strong>`;
+                    }
+                    if (data.template_id) {
+                        statusHtml += ` | Template: <strong>${data.template_id}</strong>`;
+                        if (data.template_is_new) {
+                            statusHtml += ' (new)';
+                        }
+                    }
+                    if (data.result) {
+                        statusHtml += '<br>✓ Sent to eink_mcp';
+                    }
+                    
+                    showStatus(statusHtml, 'success');
+                    
+                    // Refresh templates if learning was used
+                    if (learn) {
+                        loadTemplates('learned');
+                    }
+                }
+            } catch (error) {
+                showStatus(`✗ ${error.message}`, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Generate Dashboard';
+                document.getElementById('loadingIndicator').classList.remove('active');
+                document.getElementById('previewContainer').style.display = 'flex';
+            }
+        }
+
+        function showPreview(imageUrl) {
+            const container = document.getElementById('previewContainer');
+            container.innerHTML = `
+                <img src="${imageUrl}" class="preview-image" alt="Generated dashboard">
+                <div class="preview-info">
+                    <div style="font-size: 12px; color: #888;">800 × 480</div>
+                </div>
+            `;
+        }
+
+        function showStatus(message, type) {
+            const status = document.getElementById('status');
+            status.innerHTML = `<div class="status ${type}">${message}</div>`;
+        }
+
+        function clearStatus() {
+            document.getElementById('status').innerHTML = '';
+        }
+
+        async function loadTemplates(mode) {
+            currentTemplateMode = mode;
+            
+            // Update tabs
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            const list = document.getElementById('templatesList');
+            list.innerHTML = '<div class="loading active"><div class="spinner"></div></div>';
+
+            try {
+                if (mode === 'builtin') {
+                    const response = await fetch(`${API_BASE}/templates`);
+                    const data = await response.json();
+                    
+                    if (data.templates.length === 0) {
+                        list.innerHTML = '<div class="template-item"><div class="name">No templates</div></div>';
+                        return;
+                    }
+                    
+                    list.innerHTML = data.templates.map(t => `
+                        <div class="template-item" onclick="useTemplate('${t}')">
+                            <div class="name">${t}</div>
+                            <div class="stats">Built-in template</div>
+                        </div>
+                    `).join('');
+                } else {
+                    const response = await fetch(`${API_BASE}/templates/learned`);
+                    const data = await response.json();
+                    
+                    if (!data.top_templates || data.top_templates.length === 0) {
+                        list.innerHTML = '<div class="template-item"><div class="name">No learned templates yet</div><div class="stats">Generate with --learn to create templates</div></div>';
+                        return;
+                    }
+                    
+                    list.innerHTML = `
+                        <div class="template-item" style="background: transparent; padding: 8px 0;">
+                            <div class="stats">Total: ${data.total_templates} | Uses: ${data.total_uses} | Success: ${(data.avg_success_rate * 100).toFixed(0)}%</div>
+                        </div>
+                        ${data.top_templates.map(t => `
+                            <div class="template-item">
+                                <div class="name">${t.name || t.id}</div>
+                                <div class="stats">Uses: ${t.uses} | Success: ${(t.success_rate * 100).toFixed(0)}%</div>
+                            </div>
+                        `).join('')}
+                    `;
+                }
+            } catch (error) {
+                list.innerHTML = `<div class="template-item"><div class="name">Error loading templates</div></div>`;
+            }
+        }
+
+        function useTemplate(name) {
+            document.getElementById('prompt').value = `Use template "${name}" to show ...`;
+            document.getElementById('prompt').focus();
+        }
+
+        // Load templates on page load
+        loadTemplates('builtin');
+    </script>
+</body>
+</html>
