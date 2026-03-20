@@ -12,20 +12,20 @@ help:
 	@echo "  make clean       Remove generated files"
 
 install:
-	pip install -r requirements.txt
+	uv sync
 
 setup: install
-	playwright install chromium
+	uv run playwright install chromium
 
 run:
-	python generate.py --prompt "Show current time, weather summary, and a motivational quote" --save-html output/test.html
+	uv run python generate.py --prompt "Show current time, weather summary, and a motivational quote" --save-html output/test.html
 
 server:
-	python server.py
+	uv run python server.py
 
 test:
 	@echo "Testing dashboard generation..."
-	python generate.py --prompt "Display: temperature 22°C, humidity 65%, wind 3 m/s" --save-html output/test.html
+	uv run python generate.py --prompt "Display: temperature 22°C, humidity 65%, wind 3 m/s" --save-html output/test.html
 	@echo "HTML saved to output/test.html"
 
 clean:

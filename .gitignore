@@ -6,6 +6,10 @@ __pycache__/
 venv/
 *.egg-info/
 
+# UV
+.uv/
+uv.lock
+
 # Output
 output/*.png
 output/*.html
